@@ -45,39 +45,29 @@ void WebServerAPI::setupWiFi() {
 }
 
 void WebServerAPI::setupEndpoints() {
-    server.onRequestBody([this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
-        if (request->url() == "/led1") {
-            LEDStateDTO dto;
-            if (!dto.fromJson(String((char *) data))) {
-                request->send(400, "application/json", R"({"error":"Invalid JSON"})");
-                return;
-            }
-
-            if (dto.getState().equals("on")) {
-                digitalWrite(ledPin1, HIGH);
-            } else if (dto.getState().equals("off")) {
-                digitalWrite(ledPin1, LOW);
-            }
-            request->send(200, "application/json", R"({"message":"LED1 state changed"})");
+    auto handleLedRequest = [](AsyncWebServerRequest *request, uint8_t *data, size_t len, int ledPin) {
+        LEDStateDTO dto;
+        if (!dto.fromJson(String((char *) data))) {
+            request->send(400, "application/json", R"({"error":"Invalid JSON"})");
+            return;
         }
-    });
 
-    server.onRequestBody([this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
-        if (request->url() == "/led2") {
-            LEDStateDTO dto;
-            if (!dto.fromJson(String((char *) data))) {
-                request->send(400, "application/json", R"({"error":"Invalid JSON"})");
-                return;
-            }
-
-            if (dto.getState().equals("on")) {
-                digitalWrite(ledPin2, HIGH);
-            } else if (dto.getState().equals("off")) {
-                digitalWrite(ledPin2, LOW);
-            }
-            request->send(200, "application/json", R"({"message":"LED1 state changed"})");
+        if (dto.getState().equals("on")) {
+            digitalWrite(ledPin, HIGH);
+        } else if (dto.getState().equals("off")) {
+            digitalWrite(ledPin, LOW);
         }
-    });
+        request->send(200, "application/json", R"({"message":"LED state changed"})");
+    };
+
+    server.onRequestBody(
+            [this, handleLedRequest](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t, size_t) {
+                if (request->url() == "/led1") {
+                    handleLedRequest(request, data, len, ledPin1);
+                } else if (request->url() == "/led2") {
+                    handleLedRequest(request, data, len, ledPin2);
+                }
+            });
 
     server.on("/status", HTTP_GET, [this](AsyncWebServerRequest *request) {
         String status = "LED1: " + String(digitalRead(ledPin1) == HIGH ? "on" : "off") +
