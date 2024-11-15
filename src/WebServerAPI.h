@@ -21,6 +21,7 @@ private:
     String ssid;
     String password;
     String ipAddress;
+    String ApiName = "/api/v1";
 
     void setupEndpoints();
 };

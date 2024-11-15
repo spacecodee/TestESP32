@@ -1,0 +1,6 @@
+POST http://192.168.215.6/led1
+Content-Type: application/json
+
+{
+  "state": "on"
+}

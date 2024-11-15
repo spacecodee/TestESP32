@@ -1,10 +1,15 @@
 #include "WebServerAPI.h"
+#include "LEDStateDTO.h"
 
 WebServerAPI::WebServerAPI() : server(80) {}
+
+String webServer;
 
 void WebServerAPI::begin() {
     Serial.begin(115200);
     delay(1000);
+
+    webServer = WebServerAPI::ApiName;
 
     // Setting up the Wi-Fi
     setupWiFi();
@@ -40,37 +45,43 @@ void WebServerAPI::setupWiFi() {
 }
 
 void WebServerAPI::setupEndpoints() {
-    server.on("/led1", HTTP_POST, [this](AsyncWebServerRequest *request) {
-        if (request->hasParam("state", true)) {
-            String state = request->getParam("state", true)->value();
-            if (state == "on") {
+    server.onRequestBody([this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
+        if (request->url() == "/led1") {
+            LEDStateDTO dto;
+            if (!dto.fromJson(String((char *) data))) {
+                request->send(400, "application/json", R"({"error":"Invalid JSON"})");
+                return;
+            }
+
+            if (dto.getState().equals("on")) {
                 digitalWrite(ledPin1, HIGH);
-            } else if (state == "off") {
+            } else if (dto.getState().equals("off")) {
                 digitalWrite(ledPin1, LOW);
             }
-            request->send(200, "text/plain", "LED1 state changed");
-        } else {
-            request->send(400, "text/plain", "Bad Request");
+            request->send(200, "application/json", R"({"message":"LED1 state changed"})");
         }
     });
 
-    server.on("/led2", HTTP_POST, [this](AsyncWebServerRequest *request) {
-        if (request->hasParam("state", true)) {
-            String state = request->getParam("state", true)->value();
-            if (state == "on") {
+    server.onRequestBody([this](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
+        if (request->url() == "/led2") {
+            LEDStateDTO dto;
+            if (!dto.fromJson(String((char *) data))) {
+                request->send(400, "application/json", R"({"error":"Invalid JSON"})");
+                return;
+            }
+
+            if (dto.getState().equals("on")) {
                 digitalWrite(ledPin2, HIGH);
-            } else if (state == "off") {
+            } else if (dto.getState().equals("off")) {
                 digitalWrite(ledPin2, LOW);
             }
-            request->send(200, "text/plain", "LED2 state changed");
-        } else {
-            request->send(400, "text/plain", "Bad Request");
+            request->send(200, "application/json", R"({"message":"LED1 state changed"})");
         }
     });
 
     server.on("/status", HTTP_GET, [this](AsyncWebServerRequest *request) {
         String status = "LED1: " + String(digitalRead(ledPin1) == HIGH ? "on" : "off") +
                         ", LED2: " + String(digitalRead(ledPin2) == HIGH ? "on" : "off");
-        request->send(200, "application/json", R"({"status": ")" + status + "\"}");
+        request->send(200, "application/json", R"({"status":")" + status + "\"}");
     });
 }
